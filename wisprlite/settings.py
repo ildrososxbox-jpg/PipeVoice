@@ -47,7 +47,7 @@ LANGUAGES = [
     ("en-NZ", "English — New Zealand"),
     ("es", "Spanish"), ("fr", "French"), ("de", "German"),
     ("pt", "Portuguese"), ("it", "Italian"), ("nl", "Dutch"),
-    ("ja", "Japanese"), ("zh", "Chinese"),
+    ("ja", "Japanese"), ("zh", "Chinese"), ("el", "Greek"),
 ]
 
 _FIX_SEP = " → "
