@@ -69,3 +69,11 @@ class Recorder:
             if not self._frames:
                 return np.empty((0,), dtype="float32")
             return np.concatenate(self._frames, axis=0).flatten()
+
+    def pop_audio(self) -> np.ndarray:
+        with self._lock:
+            if not self._frames:
+                return np.empty((0,), dtype="float32")
+            audio = np.concatenate(self._frames, axis=0).flatten()
+            self._frames = []
+            return audio

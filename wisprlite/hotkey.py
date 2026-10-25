@@ -62,7 +62,7 @@ class HotkeyManager:
                 time.sleep(0.02)
                 continue
 
-            if self.get_mode() == "toggle":
+            if self.get_mode() in ("toggle", "continuous"):
                 if pressed and not prev:  # rising edge flips state
                     self._recording = not self._recording
                     self._safe(self.on_start if self._recording else self.on_stop)

@@ -613,15 +613,71 @@ class App:
         self.overlay.show("listening", "")
         self.recorder.start(on_frame=self._session.feed if engine.streaming else None)
         self._started_at = time.time()
+        if self.cfg.mode == "continuous":
+            self._continuous_recording = True
+            threading.Thread(target=self._continuous_chunk_loop, daemon=True).start()
 
     def _on_stop(self) -> None:
         if self._session is None and not self._busy.locked():
             return
+        self._continuous_recording = False
         self._beep(620, 60)
         audio = self.recorder.stop()
+        if hasattr(self.recorder, "pop_audio"):
+            rem = self.recorder.pop_audio()
+            if rem.size > 0:
+                import numpy as np
+                audio = np.concatenate([audio, rem], axis=0) if audio.size > 0 else rem
         duration = time.time() - self._started_at
         self._set_icon("transcribing")
         threading.Thread(target=self._finish, args=(audio, duration), daemon=True).start()
+
+    def _continuous_chunk_loop(self) -> None:
+        import time
+        from .vad import SilenceEndpointer
+        endpointer = SilenceEndpointer(silence_ms=self.cfg.hands_free_silence_ms)
+        while getattr(self, "_continuous_recording", False):
+            time.sleep(0.05)
+            if endpointer.feed(self.recorder.level):
+                audio = self.recorder.pop_audio()
+                if audio.size > 0:
+                    duration = audio.size / 16000.0
+                    threading.Thread(target=self._finish_chunk, args=(audio, duration), daemon=True).start()
+                endpointer = SilenceEndpointer(silence_ms=self.cfg.hands_free_silence_ms)
+
+    def _finish_chunk(self, audio, duration) -> None:
+        try:
+            if duration < self.cfg.min_seconds or audio.size == 0:
+                return
+            text = self._session.finish(audio) if self._session else ""
+            engine = self._get_engine(self._active.get("engine"))
+            if engine.streaming:
+                self._session = engine.start_session(on_partial=self.overlay.set_text)
+            
+            text = (text or "").strip()
+            if not text:
+                return
+            
+            from . import commands
+            cmd = commands.pre(text, self.cfg.voice_commands)
+            if cmd.discard:
+                return
+            text = cmd.text
+            text = self._polish(text)
+            text = commands.inline(text, self.cfg.voice_commands)
+            text = apply_replacements(text, self.cfg.replacements)
+            
+            press_enter = self._eff("auto_enter") or cmd.press_enter
+            if not text and not press_enter:
+                return
+            
+            from . import foreground
+            out = self._eff("output_mode")
+            to_clipboard = (self._clipboard_only or out == "clipboard"
+                            or foreground.is_no_text_target(self._fg_ctx))
+            self._deliver(text, to_clipboard, out, press_enter)
+        except Exception:
+            log.exception("continuous chunk finish failed")
 
     def _finish(self, audio, duration) -> None:
         try:

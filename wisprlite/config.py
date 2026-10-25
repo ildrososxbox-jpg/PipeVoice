@@ -137,7 +137,7 @@ _load_env()
 @dataclass
 class Config:
     engine: str = "gemini"          # gemini | groq | deepgram | local (openai = legacy)
-    mode: str = "ptt"               # ptt | toggle
+    mode: str = "ptt"               # ptt | toggle | continuous
     hotkey: str = "ctrl+\\"          # any key/combo, e.g. "ctrl+alt", "f9"
     clipboard_hotkey: str = "right ctrl+right shift"  # 2nd hotkey -> dictate to clipboard (no typing); safe to hold. "" = off
     # Defaults, not blanks: shipped as "" these features were invisible to anyone

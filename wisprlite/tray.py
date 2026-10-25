@@ -77,6 +77,7 @@ class Tray:
             Item("Mode", Menu(
                 mode_item("ptt", "Push-to-talk"),
                 mode_item("toggle", "Toggle"),
+                mode_item("continuous", "Continuous (pause-typed)"),
             )),
             Menu.SEPARATOR,
             Item("Settings…", lambda i, it: app.open_settings(), default=True),
