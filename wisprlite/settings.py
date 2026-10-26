@@ -23,7 +23,7 @@ ENGINES = [("gemini", "Gemini — free, one key does it all"),
            ("groq", "Groq Whisper — fast & cheap, top accuracy"),
            ("deepgram", "Deepgram — fastest, live streaming"),
            ("local", "Local Whisper — private & free, slower")]
-MODES = [("ptt", "Push-to-talk (hold)"), ("toggle", "Toggle (tap on/off)")]
+MODES = [("ptt", "Push-to-talk (hold)"), ("toggle", "Toggle (tap on/off)"), ("continuous", "Continuous (pause-typed)")]
 PASTE_SPEEDS = [("fast", "Fast"), ("normal", "Normal"), ("slow", "Slow")]
 CLEANUP_PROVIDERS = [("openai", "OpenAI"), ("gemini", "Google Gemini (free tier)"),
                      ("groq", "Groq (free, fastest)"),
