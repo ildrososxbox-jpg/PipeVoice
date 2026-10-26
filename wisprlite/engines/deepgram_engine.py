@@ -65,6 +65,7 @@ class _DeepgramSession(Session):
 
         self._on_partial = on_partial
         self._finals: list[str] = []
+        self._lock = threading.Lock()
         self._done = threading.Event()
         self._error: Optional[str] = None
         self._retried_without_bias = False
@@ -83,11 +84,12 @@ class _DeepgramSession(Session):
                 text = (alt.transcript or "").strip()
                 if not text:
                     return
-                if getattr(result, "is_final", False):
-                    self._finals.append(text)
-                    live = " ".join(self._finals)
-                else:
-                    live = " ".join(self._finals + [text])
+                with self._lock:
+                    if getattr(result, "is_final", False):
+                        self._finals.append(text)
+                        live = " ".join(self._finals)
+                    else:
+                        live = " ".join(self._finals + [text])
                 if self._on_partial:
                     self._on_partial(live)
             except Exception:
@@ -123,11 +125,7 @@ class _DeepgramSession(Session):
         except TypeError:
             opts.pop(bias_key, None)   # some SDK versions reject unknown kwargs
             options = LiveOptions(**opts)
-        # Connect in the background. This used to block the hotkey thread: no
-        # beep, no overlay, no recording until the socket opened, so on a slow
-        # network a press looked ignored and the first words were lost. Frames
-        # that arrive before the socket is up are buffered and flushed in order.
-        self._lock = threading.Lock()
+
         self._pending: list[bytes] = []
         self._live = False
         self._closed = False
@@ -135,6 +133,12 @@ class _DeepgramSession(Session):
         self._connector = threading.Thread(
             target=self._connect, args=(engine, opts, bias_key, options, LiveOptions), daemon=True)
         self._connector.start()
+
+    def pop_text(self) -> str:
+        with self._lock:
+            text = " ".join(self._finals).strip()
+            self._finals = []
+            return text
 
     def _connect(self, engine, opts, bias_key, options, LiveOptions) -> None:
         t0 = time.monotonic()

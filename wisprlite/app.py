@@ -647,12 +647,16 @@ class App:
 
     def _finish_chunk(self, audio, duration) -> None:
         try:
-            if duration < self.cfg.min_seconds or audio.size == 0:
-                return
-            text = self._session.finish(audio) if self._session else ""
-            engine = self._get_engine(self._active.get("engine"))
-            if engine.streaming:
-                self._session = engine.start_session(on_partial=self.overlay.set_text)
+            if hasattr(self._session, "pop_text"):
+                text = self._session.pop_text()
+            else:
+                if duration < self.cfg.min_seconds or audio.size == 0:
+                    return
+                text = self._session.finish(audio) if self._session else ""
+                engine = self._get_engine(self._active.get("engine"))
+                if engine.streaming:
+                    self._session = engine.start_session(on_partial=self.overlay.set_text)
+                    self.recorder.set_on_frame(self._session.feed if self._session else None)
             
             text = (text or "").strip()
             if not text:
@@ -676,6 +680,8 @@ class App:
             to_clipboard = (self._clipboard_only or out == "clipboard"
                             or foreground.is_no_text_target(self._fg_ctx))
             self._deliver(text, to_clipboard, out, press_enter)
+            if getattr(self, "_continuous_recording", False):
+                self.overlay.show("listening", "")
         except Exception:
             log.exception("continuous chunk finish failed")
 
@@ -820,17 +826,15 @@ class App:
         if to_clipboard:
             if text:
                 copy_clipboard(text)
-            self.overlay.set_state("done", "Copied to clipboard" if text else "↵")
+            if self.cfg.mode != "continuous":
+                self.overlay.set_state("done", "Copied to clipboard" if text else "↵")
             return True
         else:
             try:
                 type_text(text, out, press_enter=press_enter,
                           paste_speed=self.cfg.paste_speed)
-                # "done" only once it IS done. Set before the attempt, a failure
-                # showed the polished text as a success for a frame and then
-                # flipped to an error - two contradictory answers to "did that
-                # work?", in the order that reads as yes.
-                self.overlay.set_state("done", text or "↵")
+                if self.cfg.mode != "continuous":
+                    self.overlay.set_state("done", text or "↵")
                 return True
             except Exception as exc:
                 # Never swallow the words. Put them somewhere usable and say

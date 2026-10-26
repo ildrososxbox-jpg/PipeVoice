@@ -30,6 +30,10 @@ class Session:
         """Return the final transcript."""
         return ""
 
+    def pop_text(self) -> str:
+        """Pop accumulated streaming text without ending the session."""
+        return ""
+
     def cancel(self) -> None:
         """Abort without typing anything."""
 

@@ -27,6 +27,10 @@ class Recorder:
         self._on_frame: Optional[Callable[[bytes], None]] = None
         self._lock = threading.Lock()
 
+    def set_on_frame(self, on_frame: Optional[Callable[[bytes], None]] = None) -> None:
+        with self._lock:
+            self._on_frame = on_frame
+
     def start(self, on_frame: Optional[Callable[[bytes], None]] = None) -> None:
         with self._lock:
             self._frames = []
